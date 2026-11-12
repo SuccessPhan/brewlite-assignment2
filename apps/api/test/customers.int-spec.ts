@@ -79,8 +79,14 @@ describe('Tài khoản khách: khoá và mở khoá (PostgreSQL thật)', () => 
   });
 
   it('không khoá được tài khoản nhân viên, quản lý', async () => {
-    const staff = await prisma.user.findUniqueOrThrow({ where: { email: 'staff@brewlite.vn' } });
-    await expect(customers.lock(staff.id, { reason: 'behavior' }, manager)).rejects.toThrow(NotFoundException);
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: staff.id } })).lockedAt).toBeNull();
+    // Tự tạo tài khoản nội bộ để test chạy được trên CSDL trống (CI không chạy seed)
+    for (const role of ['STAFF', 'MANAGER'] as const) {
+      const user = await prisma.user.create({
+        data: { email: `${role.toLowerCase()}-${randomUUID().slice(0, 8)}@brewlite.test`, fullName: `Nội bộ ${role}`, passwordHash: 'x', role },
+      });
+      created.push(user.id);
+      await expect(customers.lock(user.id, { reason: 'behavior' }, manager)).rejects.toThrow(NotFoundException);
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).lockedAt).toBeNull();
+    }
   });
 });
