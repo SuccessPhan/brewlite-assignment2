@@ -4,7 +4,6 @@
 // (giá vốn tính lại theo bình quân). Bên dưới là lịch sử các phiếu đã nhập.
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/context/auth-context';
 import { formatDateTime, formatVnd } from '@/lib/format';
 import { GROUPS, qtyText, receiptTotal, stateOf, suggestQty, useInventory, type Receipt } from '@/lib/inventory';
 import Modal from '@/components/ui/Modal';
@@ -26,7 +25,6 @@ const PAGE = 8;
 
 export default function Receipts() {
   const params = useSearchParams();
-  const { user } = useAuth();
   const { ingredients, receipts, saveReceipt } = useInventory();
   const byId = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
   const [lines, setLines] = useState<Line[]>([]);
