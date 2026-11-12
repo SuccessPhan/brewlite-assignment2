@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma/prisma.service';
 
@@ -15,15 +15,15 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  // GET /health: kiểm tra backend và kết nối PostgreSQL (trang Hello của Task 1)
+  // GET /health: kiểm tra backend và kết nối PostgreSQL.
+  // Mất CSDL thì trả 503 để health check của nền tảng triển khai và smoke test sau deploy nhận ra lỗi.
   @Get('health')
   async health() {
-    let db = 'up';
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {
-      db = 'down';
+      throw new ServiceUnavailableException({ status: 'error', message: 'Không kết nối được CSDL', db: 'down' });
     }
-    return { status: 'ok', message: 'Hello from BrewLite API', db };
+    return { status: 'ok', message: 'Hello from BrewLite API', db: 'up' };
   }
 }
