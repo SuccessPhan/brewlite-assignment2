@@ -9,6 +9,12 @@ async function bootstrap() {
   // Ảnh món tải lên đi kèm JSON (tối đa ~1 MB sau khi mã hoá); mọi request khác vẫn nhỏ
   app.useBodyParser('json', { limit: '2mb' });
 
+  // Chạy sau proxy/load balancer của nền tảng triển khai: tin số tầng proxy ghi trong TRUST_PROXY (thường là 1)
+  // để req.ip là IP thật của khách. Không có thì mọi khách chung một IP, giới hạn 10 lần đăng nhập/phút áp cho cả quán.
+  // Để trống khi chạy local, tránh khách tự gửi X-Forwarded-For giả để né giới hạn.
+  const trustProxy = Number(process.env.TRUST_PROXY ?? 0);
+  if (trustProxy > 0) app.set('trust proxy', trustProxy);
+
   // Header bảo mật (chặn nhúng iframe, đoán kiểu file, lộ tên framework...)
   app.use(helmet());
 

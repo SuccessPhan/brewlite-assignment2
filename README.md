@@ -276,7 +276,7 @@ Bộ test tự dọn những gì nó đổi (bỏ ẩn món, xoá mã thử, m�
 
 | Phương thức | Đường dẫn | Đăng nhập | Việc |
 |---|---|---|---|
-| GET | `/health` | | Kiểm tra backend và CSDL |
+| GET | `/health` | | Kiểm tra backend và CSDL: 200 `"db":"up"`; mất CSDL trả 503 `"db":"down"` |
 | GET | `/products`, `/products/:id` | | Menu, chi tiết món |
 | POST | `/auth/register`, `/auth/login` | | Đăng ký, đăng nhập (trả JWT) |
 | GET | `/auth/me` | Có | Tài khoản, điểm, lịch sử điểm |
@@ -348,6 +348,7 @@ brewlite-assignment2/
 | apps/api/.env, .env | JWT_SECRET | Khoá ký token, chuỗi ngẫu nhiên ≥ 32 ký tự (bắt buộc với Docker và production) |
 | .env | DB_OWNER_PASSWORD, DB_APP_PASSWORD | Mật khẩu 2 tài khoản CSDL khi chạy Docker (bỏ trống thì dùng mật khẩu mặc định cho máy cá nhân) |
 | apps/api/.env | FRONTEND_URL | Địa chỉ frontend được phép gọi API (CORS) |
+| apps/api/.env | TRUST_PROXY | Số tầng proxy trước API khi triển khai (thường 1) để giới hạn request tính theo IP thật của khách; chạy local để trống |
 | apps/api/.env | VNP_TMN_CODE | Mã website VNPay sandbox (trong email đăng ký) |
 | apps/api/.env | VNP_HASH_SECRET | Chuỗi bí mật ký HMAC-SHA512, **không đưa lên GitHub** |
 | apps/api/.env | VNP_URL, VNP_API_URL, VNP_RETURN_URL | Để trống thì dùng địa chỉ sandbox và `http://localhost:3000/payment/vnpay-return` |
