@@ -8,13 +8,14 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "db:push": "prisma db push --skip-generate",
     "seed": "ts-node src/seed.ts",
     "db:harden": "ts-node src/db-harden.ts",
-    "db:setup": "prisma db push --skip-generate && ts-node src/db-harden.ts && ts-node src/seed.ts",
+    "db:setup": "ts-node src/db-migrate.ts && ts-node src/db-harden.ts && ts-node src/seed.ts",
     "test": "jest",
     "test:int": "jest --config ./test/jest-int.json --runInBand",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:migrate": "ts-node src/db-migrate.ts",
+    "db:migrate:dev": "prisma migrate dev"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

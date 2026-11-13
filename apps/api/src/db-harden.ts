@@ -1,5 +1,5 @@
 /**
- * Rào CSDL: chạy sau `prisma db push`, bằng tài khoản CHỦ CSDL (DIRECT_URL). Chạy lại nhiều lần vẫn an toàn.
+ * Rào CSDL: chạy sau migration (`npm run db:migrate`), bằng tài khoản CHỦ CSDL (DIRECT_URL). Chạy lại nhiều lần vẫn an toàn.
  *   npm run db:harden          (khi phát triển)
  *   node dist/db-harden.js     (trong Docker)
  *
