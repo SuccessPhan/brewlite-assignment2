@@ -127,7 +127,7 @@ Khoảng 5 phút, đi đúng luồng bàn giao của đề: chọn món → gi�
 9. Mở **Lịch sử giao dịch** (menu tài khoản hoặc trang Tài khoản → Xem tất cả): thấy 2 giao dịch (thất bại, thành công). Bấm vào giao dịch thành công: chi tiết + nhật ký trao đổi với VNPay; bấm **Kiểm tra lại với VNPay** để hỏi lại VNPay (API `querydr`).
 10. Đăng nhập trang quản trị merchant sandbox https://sandbox.vnpayment.vn/merchantv2/ (tài khoản trong email đăng ký) → **Tra cứu giao dịch**: thấy đúng giao dịch, đúng số tiền và mã `vnp_TxnRef` như trong BrewLite.
 11. **Theo dõi đơn hàng**: mã đơn để đọc tại quầy An Dương Vương. Mở cửa sổ ẩn danh, mở `/login`, đăng nhập `staff@brewlite.vn` → vào thẳng **Quầy pha chế**: bấm *Bắt đầu pha* → *Pha xong* → *Đã giao khách*; trang theo dõi đơn của khách tự cập nhật PAID → PREPARING → READY → COMPLETED.
-12. Mở terminal chạy `npm run test` và `npm run test:int` trong `backend` để chứng minh Task 10 và việc xử lý kết quả VNPay.
+12. Mở terminal chạy `npm run test` và `npm run test:int` trong `apps/api` để chứng minh Task 10 và việc xử lý kết quả VNPay.
 
 ## Product Backlog và mã nguồn
 
@@ -197,9 +197,16 @@ Mã giảm giá lưu trong bảng `Voucher` (điều kiện: đơn tối thiểu
 
 ```bash
 cd apps/api
+npm run lint        # ESLint
 npm run test        # unit test: máy trạng thái (a), luật khuyến mãi
 npm run test:int    # integration test trên PostgreSQL thật (cần docker compose up -d db)
+
+cd ../web
+npm run lint        # ESLint (cấu hình Next.js)
+npm run test        # component test trang menu (Vitest + Testing Library): đang tải, lỗi, rỗng, lọc, tìm không dấu
 ```
+
+CI (`.github/workflows/ci.yml`) chạy tự động khi mở pull request, mỗi app theo thứ tự **Install → Lint → Unit Test → Build**; backend chạy thêm integration test trên PostgreSQL. Bước nào lỗi thì CI đỏ và PR không merge được.
 
 | Tiêu chí | Test |
 |---|---|
@@ -207,6 +214,8 @@ npm run test:int    # integration test trên PostgreSQL thật (cần docker com
 | (b) 2 lần cùng Idempotency-Key chỉ tạo 1 giao dịch | `test/payments-vnpay.int-spec.ts` (gửi tuần tự và 5 request đồng thời: 1 giao dịch, 1 link; Return + 4 IPN tới cùng lúc: điểm chỉ cộng 1 lần) |
 | Xử lý kết quả VNPay | `test/payments-vnpay.int-spec.ts` (VNPay giả lập bằng tham số ký đúng: thành công, khách huỷ rồi trả lại, sửa tham số → chữ ký sai 97, sai số tiền 04, mã lạ 01, trả 2 lần → cần hoàn tiền, đối soát querydr), `src/payments/vnpay/vnpay.util.spec.ts` (chữ ký so với giá trị tính độc lập bằng Python, giờ GMT+7) |
 | (c) đặt đồng thời không vượt tồn kho | `test/stock-concurrency.int-spec.ts` (kho 5, 12 khách đặt cùng lúc → đúng 5 đơn) |
+| API menu `GET /products`, `GET /products/:id` | `test/products-api.int-spec.ts` (gọi HTTP thật: 200, không lộ cột nội bộ, lọc danh mục, món ẩn 404, món báo hết tồn 0) |
+| Trang menu: đang tải, lỗi, rỗng | `apps/web/components/menu/MenuBrowser.test.tsx` |
 | Báo giá, tự huỷ đơn bỏ dở, quầy huỷ đơn có hoàn tiền / hoàn điểm, tổng quan | `test/order-flows.int-spec.ts` |
 
 ## Bảo mật

@@ -11,3 +11,9 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# File sinh ra khi build/test
+*.tsbuildinfo
+next-env.d.ts
+test-results/
+playwright-report/

@@ -1,12 +1,19 @@
 name: CI
 
+# Chạy khi mở/cập nhật pull request và khi merge vào main.
+# Mỗi app đi đúng thứ tự Install → Lint → Unit Test → Build; bước nào lỗi thì dừng, PR không merge được.
 on:
   push:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
+    name: Backend (NestJS)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,14 +38,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: npm run build
-      - run: npm run test
-      - run: npx prisma db push --skip-generate
-      - run: npm run db:harden
-      - run: npm run test:int
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit test
+        run: npm run test
+      - name: Build
+        run: npm run build
+      - name: Chuẩn bị CSDL cho integration test
+        run: |
+          npx prisma db push --skip-generate
+          npm run db:harden
+      - name: Integration test (PostgreSQL thật)
+        run: npm run test:int
 
   frontend:
+    name: Frontend (Next.js)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -48,6 +66,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: npm run typecheck
-      - run: npm run build
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Kiểm kiểu TypeScript
+        run: npm run typecheck
+      - name: Unit test (component)
+        run: npm run test
+      - name: Build
+        run: npm run build
