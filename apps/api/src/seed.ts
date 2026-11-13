@@ -12,6 +12,18 @@ const prisma = new PrismaClient();
 const img = (id: string) => `https://images.unsplash.com/photo-${id}`;
 const COFFEE = ['cafe', 'coffee', 'caphe'];
 
+/**
+ * Mật khẩu tài khoản nội bộ. Máy cá nhân dùng mật khẩu mẫu; production đặt SEED_STAFF_PASSWORD, SEED_MANAGER_PASSWORD
+ * trên nền tảng triển khai (không nằm trong repo) để người đọc README không vào được khu quầy, khu quản lý.
+ * Chỉ dùng khi TẠO tài khoản lần đầu; đổi mật khẩu sau đó trong ứng dụng thì seed không ghi đè.
+ */
+const DEMO_PASSWORD = 'Brewlite123';
+const STAFF_PASSWORD = process.env.SEED_STAFF_PASSWORD || DEMO_PASSWORD;
+const MANAGER_PASSWORD = process.env.SEED_MANAGER_PASSWORD || DEMO_PASSWORD;
+if (process.env.NODE_ENV === 'production' && (STAFF_PASSWORD === DEMO_PASSWORD || MANAGER_PASSWORD === DEMO_PASSWORD)) {
+  console.warn('[CHÚ Ý] Chưa đặt SEED_STAFF_PASSWORD / SEED_MANAGER_PASSWORD: tài khoản nội bộ mới tạo dùng mật khẩu mẫu');
+}
+
 const TOPPINGS = [
   { id: 'espresso', name: 'Thêm shot espresso', price: 10000 },
   { id: 'cheese', name: 'Kem cheese', price: 12000 },
@@ -91,12 +103,12 @@ async function main() {
   await prisma.user.upsert({
     where: { email: 'staff@brewlite.vn' },
     update: { role: 'STAFF' },
-    create: { email: 'staff@brewlite.vn', fullName: 'Nhân viên quầy', passwordHash: await bcrypt.hash('Brewlite123', 10), role: 'STAFF' },
+    create: { email: 'staff@brewlite.vn', fullName: 'Nhân viên quầy', passwordHash: await bcrypt.hash(STAFF_PASSWORD, 10), role: 'STAFF' },
   });
   await prisma.user.upsert({
     where: { email: 'manager@brewlite.vn' },
     update: { role: 'MANAGER' },
-    create: { email: 'manager@brewlite.vn', fullName: 'Quản lý cửa hàng', passwordHash: await bcrypt.hash('Brewlite123', 10), role: 'MANAGER' },
+    create: { email: 'manager@brewlite.vn', fullName: 'Quản lý cửa hàng', passwordHash: await bcrypt.hash(MANAGER_PASSWORD, 10), role: 'MANAGER' },
   });
   // Vài khách mẫu cho trang Tài khoản khách của quản lý; một tài khoản đang bị khoá để thấy luồng mở khoá
   for (const c of SAMPLE_CUSTOMERS) {
@@ -133,7 +145,7 @@ async function main() {
     await prisma.stockMove.createMany({ data: MOVEMENTS.map(({ id: _id, at, ...m }) => ({ ...m, at: new Date(at) })) });
     console.log(`Đã nạp kho: ${INGREDIENTS.length} nguyên liệu, ${RECIPES.length} công thức, ${RECEIPTS.length} phiếu nhập`);
   }
-  console.log(`Đã nạp ${PRODUCTS.length} món, ${TOPPINGS.length} topping, ${VOUCHERS.length} mã giảm giá, tài khoản demo@brewlite.vn, staff@brewlite.vn và manager@brewlite.vn (mật khẩu Brewlite123)`);
+  console.log(`Đã nạp ${PRODUCTS.length} món, ${TOPPINGS.length} topping, ${VOUCHERS.length} mã giảm giá, tài khoản demo@brewlite.vn (mật khẩu ${DEMO_PASSWORD}), staff@brewlite.vn, manager@brewlite.vn (${STAFF_PASSWORD === DEMO_PASSWORD ? `mật khẩu ${DEMO_PASSWORD}` : 'mật khẩu đặt qua biến môi trường'})`);
 }
 
 const SAMPLE_CUSTOMERS = [
