@@ -1,0 +1,266 @@
+name: CD
+
+# Pipeline triển khai production (Task 5.3):
+#   Push/Tag → Lint và Test (ci.yml) → Build → Docker image → Push GHCR → Deploy API (Render) → Deploy web (Vercel) → Smoke test
+# Smoke test lỗi thì pipeline dừng (đỏ) và tự rollback về phiên bản trước. Rollback tay: chạy "Run workflow" với ref cũ.
+# Cách cài đặt tài khoản, secret, biến: docs/deployment.md
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Commit SHA hoặc tag cần triển khai, ví dụ v1.0.0 (dùng để rollback). Để trống = main mới nhất.'
+        required: false
+        default: ''
+
+# Mỗi lúc chỉ một lần triển khai; lần sau xếp hàng chờ, không huỷ lần đang chạy dở
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  API_URL: ${{ vars.API_URL }}
+  WEB_URL: ${{ vars.WEB_URL }}
+
+jobs:
+  # ---------- 1. Cổng chất lượng: lint, unit test, build, integration, E2E ----------
+  quality:
+    name: Lint và Test
+    # Rollback tay triển khai lại phiên bản cũ đã qua kiểm thử lúc trước, không cần chạy lại
+    if: github.event_name != 'workflow_dispatch'
+    uses: ./.github/workflows/ci.yml
+
+  # ---------- 2. Xác định phiên bản cần triển khai ----------
+  prepare:
+    name: Chuẩn bị phiên bản
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.v.outputs.sha }}
+      image: ${{ steps.v.outputs.image }}
+      version: ${{ steps.v.outputs.version }}
+      enabled: ${{ steps.v.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - id: v
+        run: |
+          SHA=$(git rev-parse HEAD)
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/$OWNER/brewlite-api" >> "$GITHUB_OUTPUT"
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"; fi
+          # Chưa cấu hình Render/Vercel (docs/deployment.md) thì chỉ build và đẩy image, bỏ qua bước deploy
+          if [[ -n "${{ vars.API_URL }}" && -n "${{ vars.WEB_URL }}" ]]; then echo "enabled=true" >> "$GITHUB_OUTPUT"; else echo "enabled=false" >> "$GITHUB_OUTPUT"; fi
+          echo "Triển khai commit $SHA"
+
+  # ---------- 3. Build Docker image API, gắn tag commit SHA (và semver khi tạo tag), đẩy lên GHCR ----------
+  image:
+    name: Build và push Docker image
+    needs: [quality, prepare]
+    if: ${{ !cancelled() && (needs.quality.result == 'success' || needs.quality.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image của commit này đã có chưa (rollback dùng lại, không build lại)
+        id: exists
+        run: |
+          if docker manifest inspect "${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.sha }}" > /dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"; echo "Đã có image, dùng lại"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/setup-buildx-action@v3
+        if: steps.exists.outputs.found != 'true'
+      - name: Build và push
+        if: steps.exists.outputs.found != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          push: true
+          tags: |
+            ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.sha }}
+            ${{ needs.prepare.outputs.version && format('{0}:{1}', needs.prepare.outputs.image, needs.prepare.outputs.version) || '' }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Gắn thêm tag phiên bản cho image có sẵn
+        if: steps.exists.outputs.found == 'true' && needs.prepare.outputs.version != ''
+        run: docker buildx imagetools create -t "${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.version }}" "${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.sha }}"
+
+  # ---------- 4. Deploy API lên Render bằng image vừa đẩy ----------
+  # Container khi khởi động: prisma migrate deploy (chỉ áp migration mới, không xoá dữ liệu) → rào CSDL → seed → chạy API.
+  # Render chỉ chuyển lưu lượng sang bản mới khi /health trả 200; migration lỗi thì bản cũ vẫn chạy.
+  deploy-api:
+    name: Deploy API (Render)
+    needs: [prepare, image]
+    if: ${{ !cancelled() && needs.image.result == 'success' && needs.prepare.outputs.enabled == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.API_URL }}/health
+    steps:
+      - name: Triển khai và chờ Render báo live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          IMAGE: ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.sha }}
+        run: |
+          set -euo pipefail
+          api() { curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "$@"; }
+          DEPLOY_ID=$(api -X POST -H "Content-Type: application/json" -d "{\"imageUrl\":\"$IMAGE\"}" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" | jq -r .id)
+          echo "Render deploy $DEPLOY_ID với image $IMAGE"
+          for i in $(seq 1 60); do
+            STATUS=$(api "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r .status)
+            echo "[$i] $STATUS"
+            case "$STATUS" in
+              live) exit 0 ;;
+              *failed|canceled|deactivated) echo "::error::Render deploy $STATUS"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Quá 10 phút Render chưa báo live"; exit 1
+
+  # ---------- 5. Deploy web lên Vercel (CDN) ----------
+  deploy-web:
+    name: Deploy web (Vercel)
+    needs: [prepare, deploy-api]
+    if: ${{ !cancelled() && needs.deploy-api.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production-web
+      url: ${{ vars.WEB_URL }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --global vercel@41
+      - name: Build và deploy production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+  # ---------- 6. Smoke test trên production ----------
+  smoke:
+    name: Smoke test
+    needs: [deploy-api, deploy-web]
+    if: ${{ !cancelled() && needs.deploy-web.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - run: bash scripts/smoke-test.sh "$API_URL" "$WEB_URL"
+
+  # ---------- 7. Smoke test hoặc deploy lỗi: tự rollback về commit main trước đó ----------
+  rollback:
+    name: Rollback
+    needs: [prepare, deploy-api, deploy-web, smoke]
+    if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.prepare.outputs.enabled == 'true' && (needs.deploy-api.result == 'failure' || needs.deploy-web.result == 'failure' || needs.smoke.result == 'failure') }}
+    runs-on: ubuntu-latest
+    env:
+      PREVIOUS: ${{ github.event.before }}
+      IMAGE: ${{ needs.prepare.outputs.image }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Kiểm tra có image của phiên bản trước
+        run: |
+          if ! docker manifest inspect "$IMAGE:$PREVIOUS" > /dev/null 2>&1; then
+            echo "::error::Không có image $IMAGE:$PREVIOUS (lần đầu triển khai?). Rollback tay theo docs/deployment.md"; exit 1
+          fi
+      - name: Rollback API về image trước
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          api() { curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" "$@"; }
+          DEPLOY_ID=$(api -X POST -H "Content-Type: application/json" -d "{\"imageUrl\":\"$IMAGE:$PREVIOUS\"}" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" | jq -r .id)
+          for i in $(seq 1 60); do
+            STATUS=$(api "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r .status)
+            echo "[$i] $STATUS"
+            case "$STATUS" in live) exit 0 ;; *failed|canceled|deactivated) exit 1 ;; esac
+            sleep 10
+          done
+          exit 1
+      - name: Lấy mã nguồn phiên bản trước
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.before }}
+          path: previous
+      - name: Lấy script smoke test của phiên bản hiện tại
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+          path: current
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Rollback web về commit trước
+        working-directory: previous
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm install --global vercel@41
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+      - name: Smoke test sau rollback
+        run: bash current/scripts/smoke-test.sh "$API_URL" "$WEB_URL"
+
+  # ---------- 8. Tạo tag vX.Y.Z thì phát hành GitHub Release kèm release notes ----------
+  release:
+    name: GitHub Release
+    needs: [prepare, smoke]
+    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.smoke.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tạo release (dùng docs/releases/<tag>.md nếu có, không thì tự sinh từ PR đã merge)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ -f "docs/releases/$TAG.md" ]]; then
+            gh release create "$TAG" --title "BrewLite $TAG" --notes-file "docs/releases/$TAG.md"
+          else
+            gh release create "$TAG" --title "BrewLite $TAG" --generate-notes
+          fi
