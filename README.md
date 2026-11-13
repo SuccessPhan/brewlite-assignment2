@@ -44,6 +44,7 @@ Bài tập lớn môn Công nghệ Phần mềm · Học kỳ I, năm học 2026
 - 💳 **Thanh toán không tiền mặt**: cổng VNPay (môi trường thử sandbox) hoặc điểm BrewLite, hỗ trợ thanh toán lại khi thất bại.
 - 🎁 **Khuyến mãi và điểm thưởng**: áp mã giảm giá, tích điểm khi thanh toán thành công, đổi điểm lấy quà.
 - 📦 **Theo dõi đơn hàng**: cập nhật trạng thái từ lúc đặt đến khi hoàn thành.
+- 📱 **PWA**: cài lên màn hình chính điện thoại (manifest, icon, service worker), mở toàn màn hình như ứng dụng; mất mạng thì hiện trang báo thay vì trang lỗi. Service worker chỉ lưu file tĩnh, không lưu giá, đơn hay dữ liệu tài khoản.
 
 ## Công nghệ sử dụng
 
@@ -214,7 +215,7 @@ npm run lint        # ESLint (cấu hình Next.js)
 npm run test        # component test trang menu (Vitest + Testing Library): đang tải, lỗi, rỗng, lọc, tìm không dấu
 ```
 
-**E2E (Playwright)**: `tests/e2e/specs/dat-va-thanh-toan.spec.ts` đi trọn luồng trên khung điện thoại: menu → tìm "bx" → chọn size L, topping → giỏ hàng → chưa đăng nhập bị chuyển sang đăng nhập → đăng ký → quay lại giỏ còn nguyên → trả bằng điểm → màn hình xác nhận → theo dõi đơn. Trả bằng điểm để không phụ thuộc VNPay sandbox (luồng VNPay đã có integration test).
+**E2E (Playwright)**: `tests/e2e/specs/dat-va-thanh-toan.spec.ts` đi trọn luồng trên khung điện thoại: menu → tìm "bx" → chọn size L, topping → giỏ hàng → chưa đăng nhập bị chuyển sang đăng nhập → đăng ký → quay lại giỏ còn nguyên → trả bằng điểm → màn hình xác nhận → theo dõi đơn. Trả bằng điểm để không phụ thuộc VNPay sandbox (luồng VNPay đã có integration test). `tests/e2e/specs/pwa.spec.ts` kiểm tra PWA: manifest đủ trường để cài, icon tải được, service worker kiểm soát trang, mất mạng thì hiện trang báo.
 
 ```bash
 cd apps/api && npm run build && cd ../web && npm run build   # build một lần
