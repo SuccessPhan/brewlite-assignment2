@@ -214,7 +214,16 @@ npm run lint        # ESLint (cấu hình Next.js)
 npm run test        # component test trang menu (Vitest + Testing Library): đang tải, lỗi, rỗng, lọc, tìm không dấu
 ```
 
-CI (`.github/workflows/ci.yml`) chạy tự động khi mở pull request, mỗi app theo thứ tự **Install → Lint → Unit Test → Build**; backend chạy thêm integration test trên PostgreSQL. Bước nào lỗi thì CI đỏ và PR không merge được.
+**E2E (Playwright)**: `tests/e2e/specs/dat-va-thanh-toan.spec.ts` đi trọn luồng trên khung điện thoại: menu → tìm "bx" → chọn size L, topping → giỏ hàng → chưa đăng nhập bị chuyển sang đăng nhập → đăng ký → quay lại giỏ còn nguyên → trả bằng điểm → màn hình xác nhận → theo dõi đơn. Trả bằng điểm để không phụ thuộc VNPay sandbox (luồng VNPay đã có integration test).
+
+```bash
+cd apps/api && npm run build && cd ../web && npm run build   # build một lần
+cd ../../tests/e2e
+npm install && npx playwright install chromium               # lần đầu
+npm test                                                      # tự bật API (3001) và web (3000); đang chạy sẵn thì dùng luôn
+```
+
+CI (`.github/workflows/ci.yml`) chạy tự động khi mở pull request, mỗi app theo thứ tự **Install → Lint → Unit Test → Build**; backend chạy thêm integration test trên PostgreSQL; sau đó job E2E chạy Playwright trên bản build thật. Bước nào lỗi thì CI đỏ và PR không merge được.
 
 | Tiêu chí | Test |
 |---|---|
