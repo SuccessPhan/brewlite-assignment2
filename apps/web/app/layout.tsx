@@ -8,6 +8,7 @@ import BottomNav from '@/components/layout/BottomNav';
 import QueryProvider from '@/components/layout/QueryProvider';
 import StorefrontSync from '@/components/layout/StorefrontSync';
 import SiteChrome from '@/components/layout/SiteChrome';
+import ServiceWorkerRegister from '@/components/layout/ServiceWorkerRegister';
 import SiteFooter from '@/components/layout/SiteFooter';
 import { ProductSheetProvider } from '@/components/product/ProductSheetProvider';
 import './globals.css';
@@ -21,6 +22,10 @@ const plexMono = IBM_Plex_Mono({ subsets: ['latin', 'vietnamese'], weight: ['400
 export const metadata: Metadata = {
   title: 'BrewLite – Đặt cà phê, thanh toán không tiền mặt',
   description: 'Đặt món trước tại BrewLite An Dương Vương, thanh toán bằng ví điện tử hoặc thẻ liên kết, tới quầy đọc mã đơn là lấy.',
+  applicationName: 'BrewLite',
+  // PWA: icon trên tab, trên màn hình chính iPhone; mở từ màn hình chính thì chạy toàn màn hình
+  icons: { icon: [{ url: '/icons/icon.svg', type: 'image/svg+xml' }], apple: '/icons/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'BrewLite', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {
@@ -32,6 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="vi" className={`${playfair.variable} ${lora.variable} ${oswald.variable} ${plexMono.variable}`}>
       <body className="min-h-dvh font-sans antialiased">
+        <ServiceWorkerRegister />
         <QueryProvider>
           <AuthProvider>
             <StorefrontSync />

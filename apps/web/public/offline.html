@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#efe7d4" />
+    <title>Mất kết nối – BrewLite</title>
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px 16px;
+        background: #efe7d4;
+        color: #1b1712;
+        font-family: Georgia, 'Times New Roman', serif;
+      }
+      main { max-width: 420px; width: 100%; text-align: center; border-top: 3px double #1b1712; border-bottom: 3px double #1b1712; padding: 32px 8px; }
+      h1 { margin: 0; font-size: 2.6rem; font-weight: 900; letter-spacing: -0.02em; }
+      .stamp { display: inline-block; margin-top: 20px; padding: 4px 12px; border: 2px solid #b3261e; color: #b3261e; font: 600 0.8rem/1.4 system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; }
+      p { margin: 16px 0 0; line-height: 1.6; color: rgba(27, 23, 18, 0.75); }
+      button { margin-top: 24px; min-height: 48px; padding: 0 28px; border: 0; background: #b3261e; color: #f7f1e3; font: 600 1rem system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+      button:hover { background: #8a1c16; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>BrewLite</h1>
+      <span class="stamp">Mất kết nối mạng</span>
+      <p>Điện thoại đang không có mạng nên chưa tải được trang. Giỏ hàng của bạn vẫn được giữ trên máy.</p>
+      <p>Kết nối lại Wi-Fi hoặc 4G rồi bấm thử lại nhé.</p>
+      <button type="button" onclick="location.reload()">Thử lại</button>
+    </main>
+  </body>
+</html>
