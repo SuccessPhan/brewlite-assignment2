@@ -7,7 +7,11 @@
  *    không tạo, sửa, xoá bảng. App có lỗi hay bị tấn công cũng không DROP TABLE hay đổi cấu trúc được.
  * 2. CHECK constraint: CSDL tự từ chối số âm (tồn kho, điểm, tiền) dù code phía trên có lỗi.
  */
+import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
+// Chạy ở máy: đọc DIRECT_URL, DATABASE_URL từ apps/api/.env. Docker, CI đã có biến môi trường thì giữ nguyên (không ghi đè).
+config({ quiet: true });
 
 /** [bảng, tên ràng buộc, điều kiện] */
 const CHECKS: [string, string, string][] = [

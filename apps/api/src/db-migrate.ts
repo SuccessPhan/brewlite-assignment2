@@ -12,7 +12,11 @@
 import { execFileSync } from 'child_process';
 import { readdirSync } from 'fs';
 import { join } from 'path';
+import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
+// Chạy ở máy: đọc DIRECT_URL, DATABASE_URL từ apps/api/.env. Docker, CI đã có biến môi trường thì giữ nguyên (không ghi đè).
+config({ quiet: true });
 
 const MIGRATIONS_DIR = join(__dirname, '..', 'prisma', 'migrations');
 
