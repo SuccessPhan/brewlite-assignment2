@@ -48,9 +48,15 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
-      - name: Chuẩn bị CSDL cho integration test
+      - name: Kiểm tra schema.prisma khớp thư mục migration
+        # Sửa schema mà quên tạo migration (npm run db:migrate:dev) thì bước này báo lỗi
         run: |
-          npx prisma db push --skip-generate
+          psql "postgresql://brewlite:brewlite@localhost:5433/brewlite" -c "CREATE DATABASE brewlite_shadow"
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "postgresql://brewlite:brewlite@localhost:5433/brewlite_shadow" --exit-code
+      - name: Áp migration, rào CSDL
+        run: |
+          npm run db:migrate
           npm run db:harden
       - name: Integration test (PostgreSQL thật)
         run: npm run test:int

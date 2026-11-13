@@ -1,11 +1,12 @@
-// Lược đồ CSDL BrewLite (PostgreSQL). Chạy `npm run db:setup` để tạo bảng, rào CSDL và nạp dữ liệu mẫu.
+// Lược đồ CSDL BrewLite (PostgreSQL). Chạy `npm run db:setup` để áp migration, rào CSDL và nạp dữ liệu mẫu.
+// Sửa lược đồ thì chạy `npm run db:migrate:dev -- --name <ten-thay-doi>` để sinh migration mới trong prisma/migrations rồi commit kèm.
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider  = "postgresql"
-  // App chạy bằng tài khoản chỉ đọc/ghi dữ liệu; prisma db push dùng tài khoản chủ CSDL (src/db-harden.ts)
+  // App chạy bằng tài khoản chỉ đọc/ghi dữ liệu; migration dùng tài khoản chủ CSDL (src/db-harden.ts)
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }

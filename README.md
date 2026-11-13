@@ -70,7 +70,7 @@ Nhấp đúp vào `run-brewlite.bat`. Script sẽ tự động:
 
 1. Khởi động PostgreSQL bằng Docker
 2. Cài đặt thư viện
-3. Tạo bảng (`prisma db push`) và nạp dữ liệu mẫu
+3. Tạo bảng theo migration (`prisma migrate deploy`) và nạp dữ liệu mẫu
 4. Chạy backend, frontend và mở trình duyệt
 
 ### Cách 2: Docker Compose (dùng khi bàn giao)
@@ -91,7 +91,7 @@ docker compose up -d db                      # PostgreSQL ở cổng 5433
 cd apps/api
 cp .env.example .env                         # Windows: copy .env.example .env, rồi điền VNP_TMN_CODE, VNP_HASH_SECRET
 npm install                                  # tự chạy prisma generate
-npm run db:setup                             # tạo bảng + rào CSDL + nạp dữ liệu mẫu
+npm run db:setup                             # áp migration + rào CSDL + nạp dữ liệu mẫu
 npm run start:dev                            # http://localhost:3001/health
 
 cd ../web                                    # cửa sổ terminal thứ hai (apps/web)
@@ -99,6 +99,14 @@ cp .env.example .env.local
 npm install
 npm run dev                                  # http://localhost:3000
 ```
+
+### Thay đổi lược đồ CSDL (migration)
+
+Bảng được tạo bằng **Prisma Migrate**: mỗi thay đổi lược đồ là một thư mục trong `apps/api/prisma/migrations/`, có phiên bản và nằm trong Git.
+
+- Áp các migration còn thiếu: `npm run db:migrate` (trong `apps/api`). Chỉ thêm, không xoá dữ liệu; chạy lại nhiều lần vẫn an toàn. Docker chạy bước này mỗi lần khởi động backend.
+- Sửa `schema.prisma` thì tạo migration mới: `npm run db:migrate:dev -- --name ten-thay-doi`, rồi commit cả thư mục migration. Quên bước này thì CI báo lỗi ở bước *Kiểm tra schema.prisma khớp thư mục migration*.
+- CSDL tạo từ bản cũ bằng `prisma db push` được tự nhận ra và đánh dấu migration đầu tiên là đã áp, không cần xoá dữ liệu.
 
 **Tài khoản demo:** khách `demo@brewlite.vn` / `Brewlite123` (có sẵn 1.250 điểm); nhân viên quầy `staff@brewlite.vn` / `Brewlite123`; quản lý cửa hàng `manager@brewlite.vn` / `Brewlite123`. Mọi vai trò đăng nhập chung ở `/login`, mỗi vai trò chỉ vào khu của mình: nhân viên ở **Quầy pha chế**, quản lý ở **Quản lý cửa hàng** (tổng quan, thực đơn, mã giảm giá, nội dung trang, tài khoản khách, phản hồi, nguyên liệu, nhập kho). Thực đơn, mã giảm giá, nội dung trang, tài khoản khách và phản hồi gọi API thật (`apps/api/src/manage`, `apps/api/src/customers`): quản lý ẩn món, báo hết, đổi giá hay tạo mã thì trang khách và API đặt đơn áp dụng ngay. Kho nguyên liệu, nhập kho, công thức cũng lưu CSDL (`apps/api/src/inventory`) và đồng bộ với quầy: quầy bấm *Bắt đầu pha* thì tự trừ nguyên liệu theo công thức (size S ×0,8, L ×1,25); hết nguyên liệu thì khách thấy món *Hết hàng*, đặt bằng API cũng bị từ chối, quầy thấy cảnh báo. Mọi vai trò đăng nhập chung ở `/login`; vai trò lưu trong CSDL (không đoán theo email), đăng nhập xong tự chuyển: khách về trang khách, nhân viên vào Quầy pha chế, quản lý vào Quản lý cửa hàng. Tài khoản nội bộ không đặt món được (API đặt đơn, thanh toán, đổi điểm trả 403).
 
@@ -335,7 +343,7 @@ brewlite-assignment2/
 | File | Biến | Ý nghĩa |
 |---|---|---|
 | apps/api/.env | PORT | Cổng API (3001) |
-| apps/api/.env | DIRECT_URL | Kết nối bằng tài khoản chủ CSDL, chỉ dùng để tạo bảng và rào CSDL |
+| apps/api/.env | DIRECT_URL | Kết nối bằng tài khoản chủ CSDL, chỉ dùng để chạy migration và rào CSDL |
 | apps/api/.env | DATABASE_URL | Kết nối bằng tài khoản app `brewlite_app` (chỉ đọc/ghi dữ liệu); `db:harden` tự tạo tài khoản theo tên, mật khẩu ghi ở đây |
 | apps/api/.env, .env | JWT_SECRET | Khoá ký token, chuỗi ngẫu nhiên ≥ 32 ký tự (bắt buộc với Docker và production) |
 | .env | DB_OWNER_PASSWORD, DB_APP_PASSWORD | Mật khẩu 2 tài khoản CSDL khi chạy Docker (bỏ trống thì dùng mật khẩu mặc định cho máy cá nhân) |
