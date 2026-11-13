@@ -74,9 +74,9 @@ call :install apps\api || goto fail
 call :install apps\web || goto fail
 
 rem --- 5. Tao bang trong CSDL va nap du lieu mau ---
-echo Dang tao bang va nap du lieu mau...
+echo Dang ap migration va nap du lieu mau...
 pushd apps\api
-call npx prisma db push --skip-generate
+call npm run db:migrate
 if errorlevel 1 ( popd & goto dbfail )
 call npm run db:harden
 if errorlevel 1 ( popd & goto dbfail )
