@@ -24,10 +24,11 @@ Bài tập lớn môn Công nghệ Phần mềm · Học kỳ I, năm học 2026
 8. [Bảo mật](#bảo-mật)
 9. [Gọi API bằng Thunder Client](#gọi-api-bằng-thunder-client)
 10. [API](#api)
-11. [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-12. [Biến môi trường](#biến-môi-trường)
-13. [Lỗi thường gặp](#lỗi-thường-gặp)
-14. [Làm việc nhóm](#làm-việc-nhóm)
+11. [Triển khai production](#triển-khai-production)
+12. [Cấu trúc thư mục](#cấu-trúc-thư-mục)
+13. [Biến môi trường](#biến-môi-trường)
+14. [Lỗi thường gặp](#lỗi-thường-gặp)
+15. [Làm việc nhóm](#làm-việc-nhóm)
 
 ---
 
@@ -309,11 +310,22 @@ Bộ test tự dọn những gì nó đổi (bỏ ẩn món, xoá mã thử, m�
 | GET | `/favorites/me` | Có | Món yêu thích, lưu theo tài khoản trên CSDL |
 | PUT / DELETE | `/favorites/:productId` | Có | Lưu / bỏ một món (lưu lại lần nữa không tạo bản trùng) |
 
+## Triển khai production
+
+Web chạy trên **Vercel**, API là Docker image trên **Render**, CSDL là **Render PostgreSQL** (chỉ mạng nội bộ), image lưu ở **GHCR**. Hướng dẫn cài đặt chi tiết: [docs/deployment.md](docs/deployment.md).
+
+- **Deploy**: merge PR vào `main` thì pipeline CD (`.github/workflows/cd.yml`) chạy *Lint và Test → Build Docker image (tag commit SHA) → Push GHCR → Deploy API → Deploy web → Smoke test*. Migration chạy khi container khởi động (`prisma migrate deploy`, không xoá dữ liệu).
+- **Phát hành**: `git tag v1.0.0 && git push origin v1.0.0` thì deploy, gắn tag phiên bản cho image và tạo GitHub Release.
+- **Rollback**: deploy hoặc smoke test lỗi thì pipeline tự quay về commit trước. Rollback tay: *Actions → CD → Run workflow*, nhập tag hoặc SHA phiên bản tốt.
+- **Kiểm tra nhanh**: `bash scripts/smoke-test.sh <API_URL> <WEB_URL>`.
+
 ## Cấu trúc thư mục
 
 ```
 brewlite-assignment2/
-├── .github/workflows/        CI
+├── .github/workflows/        CI (ci.yml), CD (cd.yml)
+├── docs/deployment.md        Triển khai production, rollback
+├── scripts/smoke-test.sh     Smoke test sau triển khai
 ├── docs/requirements/        Task 1 – bối cảnh, phạm vi, SRS, use-case
 ├── docs/diagrams/            Task 2 – activity, sequence, class (nguồn .puml + ảnh)
 ├── docs/architecture/        Task 3 – kiến trúc, ADR, deployment
@@ -345,6 +357,7 @@ brewlite-assignment2/
 │   ├── components/           giao diện
 │   ├── context/              Zustand (giỏ hàng), đăng nhập
 │   └── lib/                  gọi API, React Query, tìm kiếm, định dạng
+├── tests/e2e/                E2E Playwright: luồng đặt món, PWA
 └── tests/thunder-client/     bộ request kiểm thử API và lệnh chạy toàn bộ
 ```
 
@@ -362,6 +375,7 @@ brewlite-assignment2/
 | apps/api/.env | VNP_TMN_CODE | Mã website VNPay sandbox (trong email đăng ký) |
 | apps/api/.env | VNP_HASH_SECRET | Chuỗi bí mật ký HMAC-SHA512, **không đưa lên GitHub** |
 | apps/api/.env | VNP_URL, VNP_API_URL, VNP_RETURN_URL | Để trống thì dùng địa chỉ sandbox và `http://localhost:3000/payment/vnpay-return` |
+| apps/api/.env (production) | SEED_STAFF_PASSWORD, SEED_MANAGER_PASSWORD | Mật khẩu `staff@`, `manager@` khi seed tạo lần đầu; để trống thì dùng mật khẩu mẫu `Brewlite123` |
 | apps/web/.env.local | NEXT_PUBLIC_API_URL | Địa chỉ API mà trình duyệt gọi tới |
 
 ## Lỗi thường gặp

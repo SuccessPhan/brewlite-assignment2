@@ -1,11 +1,10 @@
 name: CI
 
-# Chạy khi mở/cập nhật pull request và khi merge vào main.
-# Mỗi app đi đúng thứ tự Install → Lint → Unit Test → Build; bước nào lỗi thì dừng, PR không merge được.
+# Chạy khi mở/cập nhật pull request; khi merge vào main thì pipeline CD (cd.yml) gọi lại file này làm cổng chất lượng.
+# Mỗi app đi đúng thứ tự Install → Lint → Unit Test → Build; bước nào lỗi thì dừng, PR không merge được, không deploy.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}
