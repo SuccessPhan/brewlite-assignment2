@@ -162,11 +162,7 @@ jobs:
       - name: Build và deploy production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          set -euo pipefail
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build --prod --token="$VERCEL_TOKEN"
-          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        run: bash scripts/vercel-deploy.sh
 
   # ---------- 6. Smoke test trên production ----------
   smoke:
@@ -223,7 +219,7 @@ jobs:
         with:
           ref: ${{ github.event.before }}
           path: previous
-      - name: Lấy script smoke test của phiên bản hiện tại
+      - name: Lấy script deploy, smoke test của phiên bản hiện tại
         uses: actions/checkout@v7
         with:
           sparse-checkout: scripts
@@ -236,11 +232,8 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          set -euo pipefail
           npm install --global vercel@65
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build --prod --token="$VERCEL_TOKEN"
-          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+          bash ../current/scripts/vercel-deploy.sh
       - name: Smoke test sau rollback
         run: bash current/scripts/smoke-test.sh "$API_URL" "$WEB_URL"
 
