@@ -8,6 +8,8 @@ Bài tập lớn môn Công nghệ Phần mềm · Học kỳ I, năm học 2026
 
 `Next.js 15` · `NestJS 11` · `PostgreSQL 16` · `Prisma` · `Docker Compose`
 
+**Production:** [brewlite-nhom10.vercel.app](https://brewlite-nhom10.vercel.app) · API [brewlite-api-gb4h.onrender.com](https://brewlite-api-gb4h.onrender.com/health)
+
 </div>
 
 ---
@@ -313,6 +315,14 @@ Bộ test tự dọn những gì nó đổi (bỏ ẩn món, xoá mã thử, m�
 ## Triển khai production
 
 Web chạy trên **Vercel**, API là Docker image trên **Render**, CSDL là **Render PostgreSQL** (chỉ mạng nội bộ), image lưu ở **GHCR**. Hướng dẫn cài đặt chi tiết: [docs/deployment.md](docs/deployment.md).
+
+| | Địa chỉ |
+|---|---|
+| Web (PWA) | https://brewlite-nhom10.vercel.app |
+| API | https://brewlite-api-gb4h.onrender.com |
+| Health check | https://brewlite-api-gb4h.onrender.com/health |
+
+API dùng gói miễn phí của Render, ngủ sau 15 phút không có truy cập; lần gọi đầu mất khoảng 50 giây. Trước khi demo, mở `/health` một lần để đánh thức. Ghi chú các phiên bản: [docs/releases/](docs/releases/).
 
 - **Deploy**: merge PR vào `main` thì pipeline CD (`.github/workflows/cd.yml`) chạy *Lint và Test → Build Docker image (tag commit SHA) → Push GHCR → Deploy API → Deploy web → Smoke test*. Migration chạy khi container khởi động (`prisma migrate deploy`, không xoá dữ liệu).
 - **Phát hành**: `git tag v1.0.0 && git push origin v1.0.0` thì deploy, gắn tag phiên bản cho image và tạo GitHub Release.
