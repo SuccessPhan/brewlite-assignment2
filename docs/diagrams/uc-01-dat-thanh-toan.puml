@@ -1,0 +1,35 @@
+@startuml
+title Sơ đồ Use Case: Đặt món và thanh toán - BrewLite
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Khách hàng" as Customer
+actor "VNPay" as VNPay <<hệ thống ngoài>>
+
+rectangle "Hệ thống BrewLite" {
+  usecase "Đặt món và thanh toán" as UC
+  usecase "Đăng nhập" as Login
+  usecase "Xem báo giá từ máy chủ" as Quote
+  usecase "Chọn hình thức nhận\n(tại quầy / giao hàng)" as Fulfil
+  usecase "Áp mã giảm giá" as Voucher
+  usecase "Tạo đơn hàng\n(giữ tồn kho)" as Create
+  usecase "Thanh toán" as Pay
+  usecase "Thanh toán qua VNPay" as PayVnp
+  usecase "Thanh toán bằng điểm BrewLite" as PayPts
+  usecase "Thanh toán lại khi thất bại" as Retry
+  usecase "Huỷ đơn chưa thanh toán" as Cancel
+}
+
+Customer -- UC
+UC ..> Login : <<include>>
+UC ..> Quote : <<include>>
+UC ..> Fulfil : <<include>>
+UC ..> Create : <<include>>
+UC ..> Pay : <<include>>
+Voucher ..> UC : <<extend>>
+Retry ..> UC : <<extend>>
+Cancel ..> UC : <<extend>>
+PayVnp --|> Pay
+PayPts --|> Pay
+PayVnp -- VNPay
+@enduml
