@@ -1,0 +1,90 @@
+@startuml deployment-diagram
+' Sơ đồ triển khai (UML deployment diagram) môi trường production BrewLite - Task 3.2
+' Nguồn: docs/deployment.md, .github/workflows/ci.yml, .github/workflows/cd.yml, docker-compose.yml
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam node {
+  BackgroundColor #FFF8F0
+  BorderColor #6F4E37
+}
+skinparam artifact {
+  BackgroundColor #FFFFFF
+  BorderColor #6F4E37
+}
+skinparam database {
+  BackgroundColor #F3E3CC
+  BorderColor #6F4E37
+}
+skinparam rectangle {
+  BorderColor #8A8A8A
+  BorderStyle dashed
+}
+skinparam ArrowColor #444444
+
+title Sơ đồ triển khai BrewLite – môi trường production
+
+rectangle "Người dùng" as USR {
+  node "Điện thoại / máy tính\n<<device>>" as Device {
+    node "Trình duyệt\n<<execution environment>>" as Browser {
+      artifact "BrewLite PWA\n(manifest, service worker)" as PWA
+    }
+  }
+}
+
+rectangle "Production" as PROD {
+  node "Vercel Edge Network – CDN (sin1)\n<<platform>>" as Vercel {
+    artifact "Next.js 15 build\n(apps/web)\nbrewlite-nhom10.vercel.app" as WebBuild
+    artifact "Biến môi trường\nNEXT_PUBLIC_API_URL" as WebEnv
+  }
+
+  node "Render – region Singapore\n<<platform>>" as Render {
+    node "Web Service brewlite-api (gói Free)\n<<container>>" as ApiSvc {
+      artifact "brewlite-api:<commit-sha>\n(Docker image, Node 22, NestJS 11)\nPORT 10000" as ApiImg
+      artifact "Biến môi trường (secret)\nDATABASE_URL, DIRECT_URL, JWT_SECRET,\nFRONTEND_URL, TRUST_PROXY, VNP_*,\nSEED_*_PASSWORD" as ApiEnv
+      artifact "Khởi động: prisma migrate deploy\n→ db-harden → seed → node dist/main\nHealth check: GET /health" as Boot
+    }
+    database "PostgreSQL 16 – brewlite-db\n<<persistent storage>>\nchặn mọi IP từ Internet" as PG
+  }
+
+  node "VNPay sandbox\n<<external system>>" as VNPay
+}
+
+rectangle "CI/CD (GitHub)" as CICD {
+  node "GitHub Actions runner\n(ubuntu-latest)\n<<execution environment>>" as Runner {
+    artifact "ci.yml: Install → Lint → Unit Test →\nBuild → Integration → E2E" as CI
+    artifact "cd.yml: Build image → Push GHCR →\nDeploy → Smoke test (/health, /products,\nCORS, HTTPS, manifest) → Rollback" as CD
+  }
+  node "GitHub Container Registry\nghcr.io/successphan/brewlite-api\n<<container registry>>" as GHCR
+  artifact "GitHub Secrets & Variables\nRENDER_API_KEY, RENDER_SERVICE_ID,\nVERCEL_TOKEN, VERCEL_ORG_ID,\nVERCEL_PROJECT_ID, API_URL, WEB_URL" as Secrets
+}
+
+rectangle "Local (máy phát triển)" as LOCAL {
+  node "Docker Compose\n<<execution environment>>" as Compose {
+    artifact "frontend :3000" as LWeb
+    artifact "backend :3001" as LApi
+    database "postgres:16\n127.0.0.1:5433" as LDb
+  }
+}
+
+' ---------- Luồng người dùng ----------
+Browser --> Vercel : HTTPS 443\ntải trang, file tĩnh
+Browser --> ApiSvc : HTTPS 443 (REST/JSON, JWT)\nbrewlite-api-gb4h.onrender.com\nqua proxy Cloudflare của Render
+Browser ..> VNPay : HTTPS 443\nchuyển sang trang thanh toán
+ApiSvc --> PG : mạng nội bộ Render\nTCP 5432 (Internal URL)
+VNPay --> ApiSvc : HTTPS 443\nIPN /payments/vnpay/ipn
+ApiSvc --> VNPay : HTTPS 443\nquerydr (đối soát)
+
+' ---------- Luồng triển khai ----------
+Runner --> GHCR : docker push\n(tag commit SHA, vX.Y.Z)
+Runner --> Render : HTTPS – Render API\ntriển khai image
+Render ..> GHCR : kéo image
+Runner --> Vercel : HTTPS – Vercel CLI\nbuild sẵn rồi deploy production
+Secrets ..> Runner : cấp secret khi chạy
+
+' ---------- Local ----------
+LWeb --> LApi : HTTP 3001
+LApi --> LDb : TCP 5432
+@enduml
