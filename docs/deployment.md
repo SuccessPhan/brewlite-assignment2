@@ -22,14 +22,15 @@ Mỗi node trong sơ đồ ứng với một thành phần trong mã nguồn ho�
 
 | Node trong sơ đồ | Mã nguồn, cấu hình |
 |---|---|
-| BrewLite PWA (manifest, service worker) | `apps/web/app/manifest.ts`, `apps/web/public/sw.js`, `apps/web/components/layout/ServiceWorkerRegister.tsx` |
-| Vercel – Next.js build | `apps/web/` (Root Directory của project Vercel), `apps/web/vercel.json`; biến `NEXT_PUBLIC_API_URL` đọc ở `apps/web/lib/api.ts` |
-| Render – Web Service brewlite-api | `apps/api/Dockerfile` (lệnh khởi động: migrate → db-harden → seed → API), `apps/api/src/main.ts` (đọc `PORT`, `TRUST_PROXY`, `FRONTEND_URL`) |
-| Health check `/health` | `apps/api/src/app.controller.ts` (trả 503 khi mất CSDL) |
-| PostgreSQL 16 – brewlite-db | `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`, `apps/api/src/db-migrate.ts`, `apps/api/src/db-harden.ts` |
+| Điện thoại / máy tính – Trình duyệt chạy BrewLite PWA | `apps/web/app/manifest.ts`, `apps/web/public/sw.js`, `apps/web/components/layout/ServiceWorkerRegister.tsx` |
+| Vercel – CDN: Web Next.js | `apps/web/` (Root Directory của project Vercel), `apps/web/vercel.json`; biến `NEXT_PUBLIC_API_URL` đọc ở `apps/web/lib/api.ts` |
+| Render – Web Service brewlite-api (image `brewlite-api:<commit-sha>`) | `apps/api/Dockerfile` (lệnh khởi động: migrate → db-harden → seed → API), `apps/api/src/main.ts` (đọc `PORT`, `TRUST_PROXY`, `FRONTEND_URL`) |
+| Health check `/health` (chú thích) | `apps/api/src/app.controller.ts` (trả 503 khi mất CSDL) |
+| PostgreSQL 16 (persistent storage) | `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`, `apps/api/src/db-migrate.ts`, `apps/api/src/db-harden.ts` |
 | VNPay sandbox (IPN, querydr) | `apps/api/src/payments/vnpay/`, `apps/api/src/payments/payments.controller.ts` |
-| GitHub Actions runner | `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, `scripts/smoke-test.sh` |
+| GitHub Actions (ci.yml · cd.yml) | `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, `scripts/smoke-test.sh` |
 | GitHub Container Registry | bước *Build và push Docker image* trong `cd.yml` |
+| Secret, cấu hình (chú thích) | GitHub Secrets; biến môi trường trên Render, Vercel; mẫu ở `apps/api/.env.example`, `apps/web/.env.example` |
 | Local – Docker Compose | `docker-compose.yml`, `run-brewlite.bat` |
 
 Ranh giới môi trường:
