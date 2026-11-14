@@ -1,0 +1,87 @@
+@startuml
+title Sơ đồ hoạt động: Từ đặt món đến nhận món - BrewLite
+
+|Khách hàng|
+start
+:Xem thực đơn, tìm món;
+:Chọn món, size, đường, đá, topping;
+:Thêm vào giỏ hàng;
+:Vào trang thanh toán;
+
+|Hệ thống BrewLite|
+if (Đã đăng nhập?) then (chưa)
+  |Khách hàng|
+  :Đăng nhập / đăng ký;
+else (rồi)
+endif
+
+|Khách hàng|
+repeat
+  :Chọn hình thức nhận, giờ nhận,\nnhập mã giảm giá, chọn cách trả;
+  |Hệ thống BrewLite|
+  :Báo giá từ máy chủ;
+  if (Có món hết hàng\nhoặc thiếu nguyên liệu?) then (có)
+    :Báo món không đặt được;
+  else (không)
+    |Khách hàng|
+    :Bấm "Thanh toán ngay";
+    |Hệ thống BrewLite|
+    :Tính lại giá, giữ tồn kho;
+    if (Còn đủ hàng?) then (không)
+      :Báo lỗi 409: món vừa hết\n(khách khác vừa mua);
+    else (có)
+      :Tạo đơn PENDING;
+    endif
+  endif
+backward:Quay lại giỏ: bớt món\nhoặc chọn món khác;
+repeat while (Chưa tạo được đơn?) is (đúng) not (đã tạo đơn)
+
+repeat
+  if (Cách trả?) then (VNPay)
+    :Tạo link VNPay đã ký;
+    |VNPay|
+    :Khách nhập thẻ, OTP;
+    :Trả kết quả về BrewLite;
+    |Hệ thống BrewLite|
+    :Kiểm tra chữ ký, số tiền;
+  else (Điểm BrewLite)
+    :Trừ điểm;
+  endif
+  if (Thanh toán thành công?) then (có)
+    :Đơn chuyển PAID, báo khách\n(trả VNPay thì được tích điểm);
+  else (không)
+    :Đơn chuyển PAYMENT_FAILED;
+    |Khách hàng|
+    if (Cách trả?) then (VNPay)
+      :Chọn thanh toán lại hoặc huỷ đơn;
+    else (Điểm, không đủ điểm)
+      :Huỷ đơn rồi đặt lại\n(không đổi được cách trả);
+    endif
+    |Hệ thống BrewLite|
+  endif
+repeat while (Thất bại và khách\nthanh toán lại bằng VNPay?) is (có) not (không)
+
+if (Đơn đã PAID?) then (chưa)
+  :Huỷ đơn: CANCELLED, trả món về kho;
+  note right: Đơn bỏ dở quá 30 phút\ncũng tự huỷ và hoàn kho
+  stop
+else (rồi)
+endif
+
+|Nhân viên quầy|
+:Thấy đơn trong hàng đợi;
+:Bấm "Bắt đầu pha";
+|Hệ thống BrewLite|
+:Đơn PREPARING, trừ nguyên liệu\ntheo công thức, báo khách;
+|Nhân viên quầy|
+:Pha xong, bấm "Pha xong";
+|Hệ thống BrewLite|
+:Đơn READY, báo khách;
+|Nhân viên quầy|
+:Giao món, bấm "Đã giao khách";
+|Khách hàng|
+:Nhận món;
+|Hệ thống BrewLite|
+:Đơn COMPLETED;
+stop
+@enduml

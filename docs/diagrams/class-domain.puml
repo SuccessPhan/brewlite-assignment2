@@ -1,0 +1,196 @@
+@startuml
+title Sơ đồ lớp toàn hệ thống - BrewLite
+hide empty methods
+skinparam classAttributeIconSize 0
+
+enum Role {
+  CUSTOMER
+  STAFF
+  MANAGER
+}
+enum OrderStatus {
+  PENDING
+  PAID
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+  PAYMENT_FAILED
+}
+enum PaymentMethod {
+  VNPAY
+  POINTS
+}
+enum PaymentStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  NEEDS_REFUND
+}
+
+class User {
+  - id : String
+  - email : String
+  - phone : String
+  - fullName : String
+  - passwordHash : String
+  - loyaltyPoints : int
+  - role : Role
+  - lockedAt : DateTime
+  - lockReason : String
+}
+class AccountLog {
+  - id : String
+  - action : LOCK | UNLOCK
+  - reason : String
+  - byName : String
+  - createdAt : DateTime
+}
+class Product {
+  - id : String
+  - name : String
+  - price : int
+  - stock : int
+  - version : int
+  - hidden : boolean
+  - soldOut : boolean
+  - category : String
+  - kind : String
+}
+class Topping {
+  - id : String
+  - name : String
+  - price : int
+}
+class Order {
+  - id : String
+  - status : OrderStatus
+  - subtotal : int
+  - fee : int
+  - discount : int
+  - total : int
+  - voucherCode : String
+  - paymentMethod : PaymentMethod
+  - fulfillment : PICKUP | DELIVERY
+  - pickupTime : String
+  - address : String
+  - pointsEarned : int
+  - pointsUsed : int
+  - createdAt : DateTime
+}
+class OrderItem {
+  - id : String
+  - productName : String
+  - size : S | M | L
+  - sugar : int
+  - ice : int
+  - toppingIds : String[]
+  - qty : int
+  - unitPrice : int
+  - lineTotal : int
+}
+class Payment {
+  - id : String
+  - idempotencyKey : String
+  - amount : int
+  - method : PaymentMethod
+  - status : PaymentStatus
+  - txnRef : String
+  - payUrl : String
+  - expiresAt : DateTime
+  - vnpTransactionNo : String
+  - vnpResponseCode : String
+  - paidAt : DateTime
+}
+class PaymentLog {
+  - id : String
+  - source : CREATE | RETURN | IPN | QUERY
+  - message : String
+  - createdAt : DateTime
+}
+class Promotion {
+  - code : String
+  - type : PERCENT | FREESHIP
+  - percent : int
+  - maxDiscount : int
+  - minOrder : int
+  - usageLimit : int
+  - usedCount : int
+  - active : boolean
+  - startsAt : DateTime
+  - endsAt : DateTime
+}
+class LoyaltyTransaction {
+  - id : String
+  - delta : int
+  - reason : String
+  - createdAt : DateTime
+}
+class Notification {
+  - id : String
+  - title : String
+  - body : String
+  - readAt : DateTime
+}
+class Favorite {
+  - createdAt : DateTime
+}
+class Feedback {
+  - id : String
+  - name : String
+  - email : String
+  - topic : String
+  - message : String
+  - status : String
+}
+class SiteSetting {
+  - key : String
+  - value : Json
+}
+class Ingredient {
+  - id : String
+  - name : String
+  - unit : String
+  - stock : float
+  - min : float
+  - cost : int
+}
+class RecipeLine {
+  - amount : float
+}
+class Receipt {
+  - id : String
+  - at : DateTime
+  - by : String
+}
+class ReceiptLine {
+  - qty : float
+  - price : int
+}
+class StockMove {
+  - id : String
+  - kind : receipt | usage
+  - qty : float
+  - ref : String
+}
+
+User "1" -- "0..*" Order : đặt
+User "1" -- "0..*" LoyaltyTransaction
+User "1" -- "0..*" Notification
+User "1" -- "0..*" Favorite
+User "1" -- "0..*" AccountLog
+Order "1" *-- "1..*" OrderItem
+Order "1" *-- "0..*" Payment
+Payment "1" *-- "0..*" PaymentLog
+OrderItem "0..*" -- "1" Product
+Product "0..*" -- "0..*" Topping
+Favorite "0..*" -- "1" Product
+Order "0..*" -- "0..1" Promotion : áp mã
+LoyaltyTransaction "0..*" -- "0..1" Order : theo đơn
+note bottom of Promotion : Lưu ở bảng Voucher trong CSDL
+Product "1" *-- "0..*" RecipeLine
+RecipeLine "0..*" -- "1" Ingredient
+Receipt "1" *-- "1..*" ReceiptLine
+ReceiptLine "0..*" -- "1" Ingredient
+Ingredient "1" -- "0..*" StockMove
+@enduml
