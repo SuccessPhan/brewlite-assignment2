@@ -1,76 +1,62 @@
 @startuml use-case-tong-quat
 ' Sơ đồ use-case tổng quát BrewLite
 left to right direction
-skinparam packageStyle rectangle
 skinparam shadowing false
 skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam packageStyle rectangle
+skinparam roundCorner 12
+skinparam nodesep 18
+skinparam ranksep 80
+skinparam ArrowColor #6F4E37
+skinparam actor {
+  BorderColor #6F4E37
+  BackgroundColor #FFFFFF
+}
 skinparam usecase {
   BackgroundColor #FFF8F0
   BorderColor #6F4E37
 }
-skinparam actorBorderColor #6F4E37
-
-actor "Khách vãng lai" as Guest
-actor "Khách hàng" as Customer
-actor "Nhân viên quầy" as Staff
-actor "Quản lý" as Manager
-actor "VNPay" as VNPay <<hệ thống ngoài>>
-actor "Bộ hẹn giờ" as Timer <<hệ thống>>
-
-Customer -|> Guest
-
-rectangle "BrewLite" {
-  usecase "UC-02\nXem menu và tìm món" as UC02
-  usecase "UC-03\nXem chi tiết và tuỳ chọn món" as UC03
-  usecase "UC-04\nQuản lý giỏ hàng" as UC04
-  usecase "UC-05\nĐăng ký tài khoản" as UC05
-  usecase "UC-06\nĐăng nhập" as UC06
-  usecase "UC-12\nGửi phản hồi" as UC12
-
-  usecase "UC-01\nĐặt món và thanh toán" as UC01 #F3D9B1
-  usecase "UC-07\nTheo dõi đơn, lịch sử đơn" as UC07
-  usecase "UC-08\nHuỷ đơn chưa thanh toán" as UC08
-  usecase "UC-09\nLịch sử giao dịch, đối soát" as UC09
-  usecase "UC-10\nĐổi điểm lấy quà" as UC10
-  usecase "UC-11\nHồ sơ, món yêu thích, đổi mật khẩu" as UC11
-
-  usecase "UC-13\nXử lý hàng đợi pha chế" as UC13
-  usecase "UC-14\nHuỷ đơn đã thanh toán" as UC14
-
-  usecase "UC-15\nXem tổng quan doanh thu" as UC15
-  usecase "UC-16\nQuản lý thực đơn" as UC16
-  usecase "UC-17\nQuản lý mã giảm giá" as UC17
-  usecase "UC-18\nQuản lý tài khoản khách" as UC18
-  usecase "UC-19\nXử lý phản hồi, nội dung trang" as UC19
-  usecase "UC-20\nQuản lý kho nguyên liệu" as UC20
-
-  usecase "UC-21\nTự huỷ đơn bỏ dở" as UC21
+skinparam rectangle {
+  BorderColor #6F4E37
+  BackgroundColor #FFFDF9
+  FontStyle bold
 }
 
+title Sơ đồ use-case tổng quát – BrewLite
+
+actor "Khách hàng" as Customer
+actor "Khách vãng lai" as Guest
+Customer -down-|> Guest
+
+rectangle "Hệ thống BrewLite" {
+  usecase "UC-01 Đặt món và thanh toán" as UC01 #F3D9B1
+  usecase "UC-07 Theo dõi đơn,\nxem lịch sử đơn" as UC07
+  usecase "UC-08 Cập nhật trạng thái\npha chế" as UC08
+  usecase "UC-09 Quản lý cửa hàng\n(thực đơn, giá, mã giảm giá,\nkho, doanh thu)" as UC09
+  usecase "UC-06 Đăng nhập" as UC06
+  usecase "UC-02 Xem menu và tìm món" as UC02
+  usecase "UC-03 Xem chi tiết,\nchọn tuỳ chọn món" as UC03
+  usecase "UC-04 Quản lý giỏ hàng" as UC04
+  usecase "UC-05 Đăng ký tài khoản" as UC05
+}
+
+actor "VNPay\n<<hệ thống ngoài>>" as VNPay
+actor "Nhân viên quầy" as Staff
+actor "Quản lý" as Manager
+
+Customer -- UC01
+Customer -- UC07
+Guest -- UC06
 Guest -- UC02
 Guest -- UC03
 Guest -- UC04
 Guest -- UC05
-Guest -- UC06
-Guest -- UC12
-Customer -- UC01
-Customer -- UC07
-Customer -- UC08
-Customer -- UC09
-Customer -- UC10
-Customer -- UC11
-Staff -- UC06
-Staff -- UC13
-Staff -- UC14
-Manager -- UC06
-Manager -- UC15
-Manager -- UC16
-Manager -- UC17
-Manager -- UC18
-Manager -- UC19
-Manager -- UC20
-UC01 -- VNPay
-UC09 -- VNPay
-Timer -- UC21
 UC03 .> UC02 : <<extend>>
+
+UC01 -- VNPay
+UC06 -- Staff
+UC08 -- Staff
+UC06 -- Manager
+UC09 -- Manager
 @enduml
