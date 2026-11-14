@@ -6,22 +6,31 @@ Tài liệu này mô tả môi trường production, pipeline CI/CD, cách cài 
 
 | Thành phần | Nền tảng | Địa chỉ | Ghi chú |
 |---|---|---|---|
-| Frontend Next.js (PWA) | **Vercel** (CDN toàn cầu) | `https://<project>.vercel.app` | HTTPS tự cấp. Chỉ pipeline CD được deploy (`apps/web/vercel.json` tắt deploy tự động theo Git) |
-| Backend NestJS | **Render** Web Service, chạy Docker image | `https://<service>.onrender.com` | Image lấy từ GitHub Container Registry (GHCR). Health check `GET /health` |
+| Frontend Next.js (PWA) | **Vercel** (CDN toàn cầu, edge Singapore) | https://brewlite-nhom10.vercel.app | HTTPS tự cấp. Chỉ pipeline CD được deploy (`apps/web/vercel.json` tắt deploy tự động theo Git) |
+| Backend NestJS | **Render** Web Service (Singapore), chạy Docker image | https://brewlite-api-gb4h.onrender.com | Image lấy từ GitHub Container Registry (GHCR). Health check `GET /health` |
 | PostgreSQL 16 | **Render** PostgreSQL | Chỉ địa chỉ nội bộ | Ổ đĩa lưu trữ bền vững. Chặn kết nối từ ngoài (Access Control rỗng), API kết nối qua mạng nội bộ của Render |
 | Container registry | **GHCR** | `ghcr.io/successphan/brewlite-api:<commit-sha>` | Mỗi commit một tag SHA; tạo tag `vX.Y.Z` thì thêm tag phiên bản |
 | Cổng thanh toán | **VNPay sandbox** | `https://sandbox.vnpayment.vn` | Môi trường thử, không tiền thật. IPN gọi về API production |
 
-```
-Trình duyệt / PWA ──HTTPS──▶ Vercel CDN (Next.js)
-        │
-        └──────HTTPS (REST, JWT)──▶ Render: brewlite-api (Docker, cổng 3001)
-                                          │ mạng nội bộ Render (TLS)
-                                          ▼
-                                    Render PostgreSQL (không mở ra Internet)
-VNPay sandbox ──HTTPS (IPN)──▶ Render: /payments/vnpay/ipn
-GitHub Actions ──push image──▶ GHCR ──pull image──▶ Render
-```
+### Sơ đồ triển khai
+
+![Sơ đồ triển khai BrewLite](architecture/deployment-diagram.svg)
+
+Nguồn PlantUML: [architecture/deployment-diagram.puml](architecture/deployment-diagram.puml). Xuất lại ảnh: `java -jar plantuml.jar -tsvg docs/architecture/deployment-diagram.puml` (cần Graphviz).
+
+Mỗi node trong sơ đồ ứng với một thành phần trong mã nguồn hoặc cấu hình:
+
+| Node trong sơ đồ | Mã nguồn, cấu hình |
+|---|---|
+| BrewLite PWA (manifest, service worker) | `apps/web/app/manifest.ts`, `apps/web/public/sw.js`, `apps/web/components/layout/ServiceWorkerRegister.tsx` |
+| Vercel – Next.js build | `apps/web/` (Root Directory của project Vercel), `apps/web/vercel.json`; biến `NEXT_PUBLIC_API_URL` đọc ở `apps/web/lib/api.ts` |
+| Render – Web Service brewlite-api | `apps/api/Dockerfile` (lệnh khởi động: migrate → db-harden → seed → API), `apps/api/src/main.ts` (đọc `PORT`, `TRUST_PROXY`, `FRONTEND_URL`) |
+| Health check `/health` | `apps/api/src/app.controller.ts` (trả 503 khi mất CSDL) |
+| PostgreSQL 16 – brewlite-db | `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`, `apps/api/src/db-migrate.ts`, `apps/api/src/db-harden.ts` |
+| VNPay sandbox (IPN, querydr) | `apps/api/src/payments/vnpay/`, `apps/api/src/payments/payments.controller.ts` |
+| GitHub Actions runner | `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, `scripts/smoke-test.sh` |
+| GitHub Container Registry | bước *Build và push Docker image* trong `cd.yml` |
+| Local – Docker Compose | `docker-compose.yml`, `run-brewlite.bat` |
 
 Ranh giới môi trường:
 
