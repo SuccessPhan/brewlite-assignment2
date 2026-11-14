@@ -1,0 +1,41 @@
+@startuml c4-container
+' Sơ đồ C4 mức Container của BrewLite (Task 3.1). Vẽ bằng ký hiệu PlantUML thường, không cần thư viện C4 ngoài.
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam rectangle {
+  BackgroundColor #FFF8F0
+  BorderColor #6F4E37
+}
+skinparam database {
+  BackgroundColor #F3E3CC
+  BorderColor #6F4E37
+}
+skinparam actorBorderColor #6F4E37
+skinparam ArrowColor #444444
+
+title C4 mức Container – BrewLite
+
+actor "Khách hàng" as Customer
+actor "Nhân viên quầy" as Staff
+actor "Quản lý" as Manager
+
+rectangle "BrewLite" as System {
+  rectangle "Web app\n[Container: Next.js 15, React 19, PWA]\n\nGiao diện khách, quầy pha chế, khu quản lý.\nZustand (giỏ hàng, lưu ở trình duyệt),\nReact Query (gọi API, cache, thử lại),\nservice worker (file tĩnh, trang mất mạng)" as Web
+
+  rectangle "API\n[Container: NestJS 11, Node 22, Docker]\n\nREST/JSON, JWT (Passport), phân quyền 3 vai trò.\nModule: auth, products, orders, payments,\npromotions, staff, manage, inventory,\ncustomers, feedback, notifications, favorites" as Api
+
+  database "CSDL\n[Container: PostgreSQL 16]\n\nPrisma ORM, Prisma Migrate.\nTài khoản app chỉ đọc/ghi dữ liệu,\nràng buộc CHECK" as Db
+}
+
+rectangle "VNPay sandbox\n[Hệ thống ngoài]\n\nCổng thanh toán thẻ ở môi trường thử" as VNPay
+
+Customer --> Web : Xem menu, đặt món,\ntheo dõi đơn [HTTPS]
+Staff --> Web : Xử lý hàng đợi pha chế [HTTPS]
+Manager --> Web : Quản lý thực đơn, mã,\nkho, doanh thu [HTTPS]
+Web --> Api : Gọi API [HTTPS, JSON, Bearer JWT]
+Api --> Db : Đọc/ghi [TCP 5432, Prisma]
+Api --> VNPay : Tạo link đã ký, đối soát querydr [HTTPS]
+VNPay --> Api : IPN kết quả thanh toán [HTTPS]
+Customer --> VNPay : Nhập thẻ, OTP [HTTPS]
+@enduml
