@@ -66,7 +66,7 @@ Nguồn PlantUML: [uc-01-dat-mon-va-thanh-toan.puml](uc-01-dat-mon-va-thanh-toan
 | 11 | VNPay xử lý thanh toán, gọi IPN `GET /payments/vnpay/ipn` và chuyển khách về `/payment/vnpay-return`. | |
 | 12 | | Kiểm chữ ký, kiểm số tiền; khoá dòng đơn hàng; giao dịch chưa có kết quả thì ghi **SUCCEEDED**, chuyển đơn **PENDING → PAID**, cộng điểm, tăng lượt mã giảm giá, tăng số đã bán, tạo thông báo; trả IPN `00`. |
 | 13 | | Trang kết quả gọi `GET /payments/vnpay/return` (ghi nhận lần nữa nếu IPN chưa tới, không ghi trùng); hiện mã đơn, trạng thái PAID, mã giao dịch VNPay, ngân hàng, điểm được cộng; xoá giỏ hàng. |
-| 14 | Khách bấm **Theo dõi đơn**. UC kết thúc; đơn chuyển sang UC-13 *Xử lý hàng đợi pha chế* (quầy bấm *Bắt đầu pha* → *Pha xong* → *Đã giao khách*). | |
+| 14 | Khách bấm **Theo dõi đơn**. UC kết thúc; đơn chuyển sang UC-08 *Cập nhật trạng thái pha chế* (quầy bấm *Bắt đầu pha* → *Pha xong* → *Đã giao khách*). | |
 
 ## 6. Luồng thay thế
 
@@ -79,7 +79,7 @@ Nguồn PlantUML: [uc-01-dat-mon-va-thanh-toan.puml](uc-01-dat-mon-va-thanh-toan
 | A5 | Khách bấm **Hủy thanh toán** trên trang VNPay, hoặc thẻ bị từ chối (bước 10–11) | Bước 12: VNPay trả mã khác `00` (ví dụ `24`); hệ thống ghi giao dịch **FAILED**, đơn **PENDING → PAYMENT_FAILED**, không trừ điểm, không tăng lượt mã. Bước 13 hiện lý do và nút **Thanh toán lại qua VNPay**; giỏ hàng giữ nguyên. Khách bấm thì đơn **PAYMENT_FAILED → PENDING**, quay lại bước 7 với Idempotency-Key mới. |
 | A6 | Mạng chập chờn, trình duyệt gửi lại `POST /payments` cùng Idempotency-Key (bước 7) | Hệ thống tìm thấy giao dịch theo khoá, trả lại đúng giao dịch và `payUrl` cũ, không tạo giao dịch thứ hai (kể cả khi nhiều request tới cùng lúc). |
 | A7 | Khách đóng trình duyệt sau khi trả tiền, không quay về Return URL (bước 11–13) | IPN vẫn ghi nhận kết quả (nếu VNPay gọi được máy chủ). Khách mở *Lịch sử giao dịch*, bấm **Kiểm tra lại với VNPay**: hệ thống gọi `querydr`, ghi nhận theo cùng luật bước 12. |
-| A8 | Khách huỷ đơn thay vì thanh toán lại (sau A5) | Khách bấm **Huỷ đơn**: đơn **→ CANCELLED**, món trả về kho (UC-08). UC kết thúc theo đảm bảo tối thiểu. |
+| A8 | Khách huỷ đơn thay vì thanh toán lại (sau A5) | Khách bấm **Huỷ đơn**: đơn **→ CANCELLED**, món trả về kho. UC kết thúc theo đảm bảo tối thiểu. |
 
 ## 7. Luồng ngoại lệ
 
@@ -94,7 +94,7 @@ Nguồn PlantUML: [uc-01-dat-mon-va-thanh-toan.puml](uc-01-dat-mon-va-thanh-toan
 | E7 | Số tiền VNPay báo khác số tiền giao dịch (bước 12) | Không ghi nhận; IPN trả `04`; ghi nhật ký để đối soát. |
 | E8 | Khách đã trả thành công qua một link khác của cùng đơn (2 tab), hoặc đơn đã bị huỷ khi link còn mở (bước 12) | Đơn chỉ PAID một lần; giao dịch tới sau ghi **NEEDS_REFUND** để quản lý hoàn tiền thủ công. |
 | E9 | Chuyển trạng thái không hợp lệ (ví dụ thanh toán đơn đã CANCELLED hoặc COMPLETED) (bước 7 hoặc 12) | Máy trạng thái từ chối, API trả **409**, trạng thái không đổi. |
-| E10 | Khách bỏ dở: đơn PENDING quá 30 phút, không còn link VNPay đang mở | Bộ hẹn giờ chuyển đơn **CANCELLED**, trả món về kho, gửi thông báo *"chưa bị trừ tiền"* (UC-21). |
+| E10 | Khách bỏ dở: đơn PENDING quá 30 phút, không còn link VNPay đang mở | Tác vụ nền của hệ thống chuyển đơn **CANCELLED**, trả món về kho, gửi thông báo *"chưa bị trừ tiền"* (tác vụ nền của hệ thống, FR-33). |
 | E11 | VNPay hoặc máy chủ không phản hồi (bước 8–9) | Hiện lỗi kèm nút thử lại; thử lại dùng cùng Idempotency-Key nên không tạo giao dịch trùng (A6). Đơn giữ PENDING. |
 | E12 | Gửi yêu cầu quá nhanh, vượt giới hạn (bất kỳ bước nào) | API trả **429**, hiện *"Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút"*. |
 

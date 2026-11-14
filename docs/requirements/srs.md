@@ -58,7 +58,6 @@ COMPLETED và CANCELLED là trạng thái kết thúc. Mọi chuyển tiếp ngo
 | Nhân viên quầy | Vai trò STAFF: xử lý hàng đợi pha chế, huỷ đơn chưa pha |
 | Quản lý | Vai trò MANAGER: tổng quan, thực đơn, mã giảm giá, tài khoản khách, phản hồi, nội dung trang, kho |
 | VNPay | Hệ thống ngoài: nhận khách sang trang thanh toán, báo kết quả qua Return URL và IPN, trả lời truy vấn đối soát |
-| Bộ hẹn giờ | Tác vụ nền của hệ thống: mỗi phút tự huỷ đơn bỏ dở |
 
 ## 3. Sơ đồ use-case tổng quát
 
@@ -68,27 +67,20 @@ Nguồn PlantUML: [use-case-tong-quat.puml](use-case-tong-quat.puml)
 
 | Mã | Use-case | Actor chính | Yêu cầu |
 |---|---|---|---|
-| UC-01 | **Đặt món và thanh toán** ([đặc tả](uc-01-dat-mon-va-thanh-toan.md)) | Khách hàng, VNPay | FR-13 – FR-26, FR-36, FR-37 |
+| UC-01 | **Đặt món và thanh toán** ([đặc tả](uc-01-dat-mon-va-thanh-toan.md)) | Khách hàng, VNPay | FR-13 – FR-26, FR-32, FR-33, FR-36, FR-37 |
 | UC-02 | Xem menu và tìm món | Khách vãng lai | FR-01 – FR-03 |
-| UC-03 | Xem chi tiết và tuỳ chọn món | Khách vãng lai | FR-04, FR-05 |
+| UC-03 | Xem chi tiết, chọn tuỳ chọn món | Khách vãng lai | FR-04, FR-05 |
 | UC-04 | Quản lý giỏ hàng | Khách vãng lai | FR-06 – FR-08 |
 | UC-05 | Đăng ký tài khoản | Khách vãng lai | FR-09 |
 | UC-06 | Đăng nhập | Khách vãng lai, Nhân viên quầy, Quản lý | FR-10 – FR-12 |
-| UC-07 | Theo dõi đơn, lịch sử đơn | Khách hàng | FR-27, FR-28, FR-35 |
-| UC-08 | Huỷ đơn chưa thanh toán | Khách hàng | FR-32 |
-| UC-09 | Lịch sử giao dịch, đối soát | Khách hàng, VNPay | FR-24, FR-29 |
-| UC-10 | Đổi điểm lấy quà | Khách hàng | FR-38 |
-| UC-11 | Hồ sơ, món yêu thích, đổi mật khẩu | Khách hàng | FR-46, FR-47 |
-| UC-12 | Gửi phản hồi | Khách vãng lai | FR-43 |
-| UC-13 | Xử lý hàng đợi pha chế | Nhân viên quầy | FR-30, FR-31 |
-| UC-14 | Huỷ đơn đã thanh toán | Nhân viên quầy | FR-34 |
-| UC-15 | Xem tổng quan doanh thu | Quản lý | FR-39 |
-| UC-16 | Quản lý thực đơn | Quản lý | FR-40 |
-| UC-17 | Quản lý mã giảm giá | Quản lý | FR-41 |
-| UC-18 | Quản lý tài khoản khách | Quản lý | FR-42 |
-| UC-19 | Xử lý phản hồi, nội dung trang | Quản lý | FR-43, FR-44 |
-| UC-20 | Quản lý kho nguyên liệu | Quản lý | FR-45 |
-| UC-21 | Tự huỷ đơn bỏ dở | Bộ hẹn giờ | FR-33 |
+| UC-07 | Theo dõi đơn, xem lịch sử đơn | Khách hàng | FR-27 – FR-29, FR-35 |
+| UC-08 | Cập nhật trạng thái pha chế | Nhân viên quầy | FR-30, FR-31, FR-34 |
+| UC-09 | Quản lý cửa hàng (thực đơn, giá, mã giảm giá, kho, doanh thu) | Quản lý | FR-39 – FR-45 |
+
+Sơ đồ tổng quát chỉ thể hiện các use case thuộc luồng nghiệp vụ chính của đề và vai trò của từng stakeholder:
+
+- Huỷ đơn chưa thanh toán (FR-32), tự huỷ đơn bỏ dở (FR-33), lịch sử giao dịch và đối soát (FR-24, FR-29) là luồng thay thế, ngoại lệ bên trong UC-01 và UC-07.
+- Các tính năng mở rộng mức Could không có use case riêng trên sơ đồ: đổi điểm lấy quà (FR-38), gửi phản hồi (FR-43, phía khách), món yêu thích, hồ sơ, đổi mật khẩu (FR-46, FR-47).
 
 ## 4. Yêu cầu chức năng
 
