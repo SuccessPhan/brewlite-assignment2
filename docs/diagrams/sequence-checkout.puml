@@ -1,0 +1,121 @@
+@startuml
+title Sơ đồ tuần tự: Đặt món và thanh toán qua VNPay - BrewLite
+autonumber
+
+actor "Khách hàng" as KH
+participant "Giao diện\n(Next.js)" as UI
+box "NestJS API" #F4F7FF
+  participant "API Đơn hàng\n(OrdersService)" as ORD
+  participant "API Thanh toán\n(PaymentsService)" as PAY
+end box
+database "CSDL\n(PostgreSQL)" as DB
+participant "Payment Service\n(VNPay sandbox)" as VNP
+
+KH -> UI : Mở trang thanh toán (giỏ hàng, giờ nhận, mã giảm giá)
+UI -> ORD : POST /orders/quote (công khai, không cần JWT)
+ORD -> DB : Đọc giá món, tồn kho, nguyên liệu, mã giảm giá
+DB --> ORD : Dữ liệu
+ORD --> UI : Báo giá (tạm tính, phí, giảm giá, tổng tiền)
+UI --> KH : Hiện tổng tiền
+
+KH -> UI : Bấm "Thanh toán ngay"
+UI -> ORD : POST /orders (JWT)
+activate ORD
+ORD -> ORD : Kiểm tra JWT (chữ ký, hạn dùng) và vai trò khách
+ORD -> ORD : Validate dữ liệu (món, số lượng, nhận hàng, giờ nhận, mã)
+alt JWT thiếu / hết hạn / sai vai trò
+  ORD --> UI : 401 / 403
+  UI --> KH : Yêu cầu đăng nhập lại
+else Dữ liệu không hợp lệ
+  ORD --> UI : 400 + lỗi từng trường
+  UI --> KH : Báo lỗi, không tạo đơn
+else JWT và dữ liệu hợp lệ
+  ORD -> DB : Bắt đầu transaction
+  ORD -> DB : Tính lại giá theo CSDL, kiểm tra nguyên liệu
+  alt Hết hàng / thiếu nguyên liệu / mã không hợp lệ
+    ORD -> DB : Rollback
+    ORD --> UI : 409 / 400 + lý do
+    UI --> KH : Báo lỗi, không tạo đơn
+  else Hợp lệ
+    ORD -> DB : Trừ tồn kho có kiểm tra version\n(optimistic locking)
+    ORD -> DB : Áp mã giảm giá, tạo đơn PENDING
+    ORD -> DB : Commit
+    ORD --> UI : 201 Đơn PENDING (mã đơn)
+  end
+end
+deactivate ORD
+
+UI -> PAY : POST /payments (JWT) + Idempotency-Key\n(orderId, VNPAY)
+activate PAY
+PAY -> PAY : Kiểm tra JWT và vai trò khách
+PAY -> PAY : Validate orderId, method, Idempotency-Key (8–128 ký tự)
+alt JWT thiếu / hết hạn / sai vai trò
+  PAY --> UI : 401 / 403
+  UI --> KH : Yêu cầu đăng nhập lại
+else Dữ liệu không hợp lệ
+  PAY --> UI : 400 + lý do
+  UI --> KH : Báo lỗi
+else Hợp lệ
+  PAY -> DB : Tìm giao dịch theo Idempotency-Key
+  alt Khoá đã dùng
+    PAY --> UI : Trả lại giao dịch cũ (không tạo mới)
+  else Khoá mới
+    PAY -> PAY : Tạo link VNPay, ký HMAC-SHA512\n(hết hạn sau 15 phút)
+    PAY -> DB : Lưu Payment PROCESSING
+    PAY --> UI : payUrl
+  end
+end
+deactivate PAY
+
+UI -> VNP : Chuyển trình duyệt sang payUrl
+KH -> VNP : Nhập thẻ, OTP (hoặc bấm huỷ)
+VNP -> UI : Chuyển về /payment/vnpay-return?vnp_...
+UI -> PAY : GET /payments/vnpay/return (JWT)
+activate PAY
+PAY -> PAY : Kiểm tra JWT, chữ ký VNPay, chủ giao dịch và số tiền
+alt JWT sai / sai chữ ký
+  PAY --> UI : 401 / 400 (JWT hoặc chữ ký không hợp lệ)
+  UI --> KH : Báo lỗi xác thực, không ghi nhận
+else Giao dịch không thuộc tài khoản đang đăng nhập
+  PAY --> UI : 404 Không tìm thấy giao dịch
+  UI --> KH : Báo lỗi, không ghi nhận
+else Sai số tiền so với đơn
+  PAY --> UI : 400 Số tiền không khớp, không ghi nhận
+  UI --> KH : Báo lỗi, không ghi nhận
+else Thanh toán thành công (mã 00)
+  PAY -> DB : Khoá đơn, Payment SUCCEEDED, đơn PAID
+  PAY -> DB : Cộng điểm, tăng lượt dùng mã, ghi nhật ký
+  PAY --> UI : Thành công
+  UI --> KH : Màn xác nhận đơn, xoá giỏ hàng
+else Thất bại / khách huỷ
+  PAY -> DB : Payment FAILED, đơn PAYMENT_FAILED
+  PAY --> UI : Thất bại + lý do
+  UI --> KH : Cho thanh toán lại hoặc huỷ đơn
+end
+deactivate PAY
+
+note over UI, VNP
+  IPN và Return URL có thể đến theo thứ tự bất kỳ,
+  cùng dùng một hàm ghi nhận nên chỉ ghi một lần
+end note
+VNP -> PAY : GET /payments/vnpay/ipn (máy chủ gọi máy chủ)
+activate PAY
+PAY -> PAY : Kiểm tra chữ ký và số tiền
+alt Sai chữ ký / không thấy giao dịch / sai số tiền
+  PAY --> VNP : RspCode 97 / 01 / 04
+else Hợp lệ
+  PAY -> DB : Ghi nhận kết quả (đã ghi rồi thì bỏ qua)
+  PAY --> VNP : RspCode 00 (đã ghi nhận trước đó: 02)
+end
+deactivate PAY
+
+opt Chưa có kết quả, khách bấm "Kiểm tra lại" ở lịch sử giao dịch
+  UI -> PAY : POST /payments/:id/query (JWT)
+  activate PAY
+  PAY -> VNP : querydr (vnp_TxnRef, vnp_TransactionDate)
+  VNP --> PAY : Trạng thái giao dịch (có chữ ký)
+  PAY -> DB : Cập nhật Payment, đơn (đã ghi rồi thì bỏ qua)
+  PAY --> UI : Kết quả đối soát
+  deactivate PAY
+end
+@enduml
