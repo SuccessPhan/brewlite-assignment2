@@ -8,7 +8,7 @@ Tài liệu liên quan: [SRS](../requirements/srs.md) · [Sơ đồ triển khai
 
 ## 1. Tổng quan
 
-BrewLite dùng **kiến trúc phân lớp, tách frontend và backend**, trình bày theo **mô hình C4** ở mức Context và Container:
+BrewLite dùng **kiến trúc phân lớp, tách frontend và backend**:
 
 - **Web app** (Next.js, PWA) chỉ lo giao diện, không chứa luật nghiệp vụ quan trọng.
 - **API** (NestJS) giữ toàn bộ luật nghiệp vụ: tính giá, tồn kho, máy trạng thái đơn, thanh toán, phân quyền.
@@ -17,7 +17,7 @@ BrewLite dùng **kiến trúc phân lớp, tách frontend và backend**, trình 
 
 Nguyên tắc chính: **không tin trình duyệt**. Giá, giảm giá, tồn kho, trạng thái thanh toán đều do API tính lại từ CSDL hoặc xác minh bằng chữ ký; dữ liệu trình duyệt gửi lên chỉ là lựa chọn của khách.
 
-### 1.1 C4 mức Context
+### 1.1 Người dùng và hệ thống bên ngoài
 
 | Người/hệ thống | Tương tác với BrewLite |
 |---|---|
@@ -26,13 +26,17 @@ Nguyên tắc chính: **không tin trình duyệt**. Giá, giảm giá, tồn kh
 | Quản lý | Doanh thu, thực đơn và giá, mã giảm giá, kho, tài khoản khách, phản hồi |
 | VNPay sandbox | Nhận khách sang trang thanh toán; báo kết quả qua Return URL và IPN; trả lời đối soát |
 
-### 1.2 C4 mức Container
+### 1.2 Các lớp của hệ thống
 
-![C4 mức Container](c4-container.svg)
+```
+Trình duyệt / PWA ── Web app (Next.js) ── HTTPS, REST/JSON, JWT ──▶ API (NestJS) ──▶ CSDL (PostgreSQL)
+                                                                        │
+                                                                        └──▶ VNPay sandbox (thanh toán)
+```
 
-Nguồn PlantUML: [c4-container.puml](c4-container.puml)
+Vị trí từng thành phần trên môi trường thật: [sơ đồ triển khai](../deployment.md#sơ-đồ-triển-khai).
 
-| Container | Công nghệ | Trách nhiệm | Mã nguồn |
+| Lớp | Công nghệ | Trách nhiệm | Mã nguồn |
 |---|---|---|---|
 | Web app | Next.js 15 (App Router), React 19, TypeScript, TailwindCSS 4, Zustand, React Query | Giao diện mobile-first cho 3 vai trò; giỏ hàng lưu ở trình duyệt; gọi API; PWA | `apps/web` |
 | API | NestJS 11, Node 22, Passport JWT, class-validator, Prisma Client | REST API, nghiệp vụ, phân quyền, tích hợp VNPay, tác vụ nền | `apps/api` |
