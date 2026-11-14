@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Tên họ font từ các gói @fontsource (nạp trong app/layout.tsx) */
+:root {
+  --font-playfair: 'Playfair Display';
+  --font-lora: 'Lora';
+  --font-oswald: 'Oswald';
+  --font-plex-mono: 'IBM Plex Mono';
+}
+
 /* ===== Design tokens BrewLite – phong cách "tờ báo Sài Gòn xưa": giấy ngà, mực đen, mực đỏ in dấu =====
    Giữ nguyên tên token cũ (roast, foam, gold...) để mọi trang đổi theo cùng lúc. */
 @theme {

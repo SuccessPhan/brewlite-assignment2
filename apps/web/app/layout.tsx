@@ -1,6 +1,24 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { IBM_Plex_Mono, Lora, Oswald, Playfair_Display } from 'next/font/google';
+// Bộ chữ kiểu báo in, đều có bảng chữ tiếng Việt: Playfair (tít), Lora (bài), Oswald (nhãn, nút), Plex Mono (giá, mã đơn).
+// Font nằm sẵn trong gói @fontsource (cài cùng npm ci), không tải từ Google Fonts lúc build nên build không phụ thuộc mạng.
+// Mỗi tệp CSS khai báo font theo từng bảng chữ (unicode-range): trình duyệt chỉ tải phần chữ trang dùng tới.
+import '@fontsource/playfair-display/700.css';
+import '@fontsource/playfair-display/900.css';
+import '@fontsource/lora/400.css';
+import '@fontsource/lora/500.css';
+import '@fontsource/lora/600.css';
+import '@fontsource/lora/700.css';
+import '@fontsource/lora/400-italic.css';
+import '@fontsource/lora/500-italic.css';
+import '@fontsource/lora/600-italic.css';
+import '@fontsource/lora/700-italic.css';
+import '@fontsource/oswald/400.css';
+import '@fontsource/oswald/500.css';
+import '@fontsource/oswald/600.css';
+import '@fontsource/oswald/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/600.css';
 import { AppStoreProvider } from '@/context/app-store';
 import { AuthProvider } from '@/context/auth-context';
 import AppHeader from '@/components/layout/AppHeader';
@@ -12,12 +30,6 @@ import ServiceWorkerRegister from '@/components/layout/ServiceWorkerRegister';
 import SiteFooter from '@/components/layout/SiteFooter';
 import { ProductSheetProvider } from '@/components/product/ProductSheetProvider';
 import './globals.css';
-
-// Bộ chữ kiểu báo in, đều có bảng chữ tiếng Việt: Playfair (tít), Lora (bài), Oswald (nhãn, nút), Plex Mono (giá, mã đơn)
-const playfair = Playfair_Display({ subsets: ['latin', 'vietnamese'], weight: ['700', '900'], variable: '--font-playfair', display: 'swap' });
-const lora = Lora({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600', '700'], style: ['normal', 'italic'], variable: '--font-lora', display: 'swap' });
-const oswald = Oswald({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600', '700'], variable: '--font-oswald', display: 'swap' });
-const plexMono = IBM_Plex_Mono({ subsets: ['latin', 'vietnamese'], weight: ['400', '600'], variable: '--font-plex-mono', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'BrewLite – Đặt cà phê, thanh toán không tiền mặt',
@@ -35,7 +47,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="vi" className={`${playfair.variable} ${lora.variable} ${oswald.variable} ${plexMono.variable}`}>
+    <html lang="vi">
       <body className="min-h-dvh font-sans antialiased">
         <ServiceWorkerRegister />
         <QueryProvider>
