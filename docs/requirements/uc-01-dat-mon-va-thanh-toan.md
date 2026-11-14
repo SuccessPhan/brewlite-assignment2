@@ -8,9 +8,9 @@ Tài liệu liên quan: [SRS](srs.md) · [Bối cảnh và phạm vi](context-an
 
 ## 1. Sơ đồ use-case cho phạm vi UC-01
 
-![Sơ đồ use-case UC-01](uc-01-dat-mon-va-thanh-toan.svg)
+![Sơ đồ use-case UC-01](../diagrams/uc-01-dat-thanh-toan.svg)
 
-Nguồn PlantUML: [uc-01-dat-mon-va-thanh-toan.puml](uc-01-dat-mon-va-thanh-toan.puml). UC-01 là use case trọng tâm trong [sơ đồ use-case tổng quát](use-case-tong-quat.svg).
+Nguồn PlantUML: [diagrams/uc-01-dat-thanh-toan.puml](../diagrams/uc-01-dat-thanh-toan.puml). UC-01 là use case trọng tâm trong [sơ đồ use-case tổng quát](use-case-tong-quat.svg).
 
 ## 2. Thông tin chung
 
